@@ -5,9 +5,17 @@ import (
 	"net/http"
 )
 
+// type apiHandle struct {}
+
+// func (apiHandle) ServeHTTP(http.ResponseWriter, *http.Request) {
+
+// }
+
 func main() {
 
 	mux := http.NewServeMux()
+
+	mux.Handle("/", http.FileServer(http.Dir(".")))
 
 	srv := &http.Server{
 		Addr:    ":8080",

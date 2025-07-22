@@ -71,8 +71,11 @@ func main() {
 	// Kemudian, wrap fileserverHandler juga sebagai method dari config
 	mux.Handle("/app/", cfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
 
+	// api mux : api/
+	apiMux := http.NewServeMux()
+
 	// /healthz handler : Cek Status Server
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	apiMux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -88,8 +91,11 @@ func main() {
 	})
 
 	// metricsFileServer
-	mux.HandleFunc("GET /metrics", cfg.metricsFileServerHandler)
-	mux.HandleFunc("POST /reset", cfg.resetServerHandler)
+	apiMux.HandleFunc("GET /metrics", cfg.metricsFileServerHandler)
+	apiMux.HandleFunc("POST /reset", cfg.resetServerHandler)
+
+	// combine mainMux with api mux for group route
+	mux.Handle("/api/", http.StripPrefix("/api", apiMux))
 
 	// Set Config Server
 	srv := &http.Server{

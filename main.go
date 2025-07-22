@@ -29,7 +29,7 @@ func (a *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 // fileServerHandler Handler untuk menampilkan counter dari server yang di hit
-func (a *apiConfig) matricFileServerHandler(w http.ResponseWriter, r *http.Request) {
+func (a *apiConfig) metricsFileServerHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-type", "text/plain")
 	w.WriteHeader(http.StatusOK)
@@ -72,8 +72,8 @@ func main() {
 
 	})
 
-	// matricsFileServer
-	mux.HandleFunc("/matrics", cfg.matricFileServerHandler)
+	// metricsFileServer
+	mux.HandleFunc("/metrics", cfg.metricsFileServerHandler)
 	mux.HandleFunc("/reset", cfg.resetServerHandler)
 
 	// Set Config Server

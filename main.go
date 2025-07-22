@@ -31,6 +31,11 @@ func (a *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 // fileServerHandler Handler untuk menampilkan counter dari server yang di hit
 func (a *apiConfig) metricsFileServerHandler(w http.ResponseWriter, r *http.Request) {
 
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	w.Header().Add("Content-type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Hits: %v", a.fileserverHits.Load())
@@ -39,6 +44,11 @@ func (a *apiConfig) metricsFileServerHandler(w http.ResponseWriter, r *http.Requ
 
 // ResetServerHandler Handler digunakan untuk mereset counter
 func (a *apiConfig) resetServerHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
 	a.fileserverHits.Store(0)
 
@@ -62,7 +72,12 @@ func main() {
 	mux.Handle("/app/", cfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
 
 	// /healthz handler : Cek Status Server
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 
 		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 
@@ -73,8 +88,8 @@ func main() {
 	})
 
 	// metricsFileServer
-	mux.HandleFunc("/metrics", cfg.metricsFileServerHandler)
-	mux.HandleFunc("/reset", cfg.resetServerHandler)
+	mux.HandleFunc("GET /metrics", cfg.metricsFileServerHandler)
+	mux.HandleFunc("POST /reset", cfg.resetServerHandler)
 
 	// Set Config Server
 	srv := &http.Server{

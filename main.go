@@ -36,9 +36,9 @@ func (a *apiConfig) metricsFileServerHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	w.Header().Add("Content-type", "text/plain")
+	w.Header().Add("Content-type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Hits: %v", a.fileserverHits.Load())
+	fmt.Fprintf(w, "<html><body><h1>Welcome, Chirpy Admin</h1><p>Chirpy has been visited %d times!</p></body></html>", a.fileserverHits.Load())
 
 }
 
@@ -95,7 +95,7 @@ func main() {
 	apiMux.HandleFunc("POST /reset", cfg.resetServerHandler)
 
 	// combine mainMux with api mux for group route
-	mux.Handle("/api/", http.StripPrefix("/api", apiMux))
+	mux.Handle("/admin/", http.StripPrefix("/admin", apiMux))
 
 	// Set Config Server
 	srv := &http.Server{

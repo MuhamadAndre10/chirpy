@@ -33,7 +33,7 @@ func (a *apiConfig) metricsFileServerHandler(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Add("Content-type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Htis: %v", a.fileserverHits.Load())
+	fmt.Fprintf(w, "Hits: %v", a.fileserverHits.Load())
 
 }
 

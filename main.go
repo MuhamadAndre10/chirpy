@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -72,10 +73,10 @@ func main() {
 	mux.Handle("/app/", cfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
 
 	// api mux : api/
-	apiMux := http.NewServeMux()
+	adminMux := http.NewServeMux()
 
 	// /healthz handler : Cek Status Server
-	apiMux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	adminMux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -91,11 +92,21 @@ func main() {
 	})
 
 	// metricsFileServer
-	apiMux.HandleFunc("GET /metrics", cfg.metricsFileServerHandler)
-	apiMux.HandleFunc("POST /reset", cfg.resetServerHandler)
+	adminMux.HandleFunc("GET /metrics", cfg.metricsFileServerHandler)
+	adminMux.HandleFunc("POST /reset", cfg.resetServerHandler)
 
 	// combine mainMux with api mux for group route
-	mux.Handle("/admin/", http.StripPrefix("/admin", apiMux))
+	mux.Handle("/admin/", http.StripPrefix("/admin", adminMux))
+
+	// new apiMux group route
+	apiMux := http.NewServeMux()
+
+	// /api/validate_chirp route for handle validate the request chirp.
+	// chirps must be 140 char long or les.
+	apiMux.HandleFunc("POST /validate_chirp", ValidateChripHandler)
+
+	// regis to main mux
+	mux.Handle("/api", http.StripPrefix("/api", apiMux))
 
 	// Set Config Server
 	srv := &http.Server{
@@ -107,5 +118,31 @@ func main() {
 
 	// Jalankan Server
 	srv.ListenAndServe()
+
+}
+
+func ValidateChripHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+
+	}
+
+}
+
+func SuccJsonResponse(w http.ResponseWriter, code int, payload any) error {
+
+	data, _ := json.Marshal(payload)
+
+	w.WriteHeader(code)
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(data)
+
+	return nil
+
+}
+
+func ErrJsonResponse(w http.ResponseWriter, code int, msg string) error {
+
+	return SuccJsonResponse(w, code, map[string]string{"error": msg})
 
 }

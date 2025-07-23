@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync/atomic"
 )
 
@@ -140,12 +141,21 @@ func ValidateChripHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chirpWord := strings.ToLower(ch.Body)
+	chirpWordAfter := chirpWord
+	blackListWorld := []string{"kerfuffle", "sharbert", "fornax"}
+	replacment := "****"
+
+	for _, blackWorld := range blackListWorld {
+		chirpWordAfter = strings.ReplaceAll(chirpWordAfter, blackWorld, replacment)
+	}
+
 	if len(ch.Body) > 140 {
 		ErrJsonResponse(w, http.StatusBadRequest, "Chirp is to long")
 		return
 	}
 
-	SuccJsonResponse(w, http.StatusOK, map[string]any{"valid": true})
+	SuccJsonResponse(w, http.StatusOK, map[string]any{"cleaned_body": chirpWordAfter})
 
 }
 

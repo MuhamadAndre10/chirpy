@@ -141,9 +141,8 @@ func ValidateChripHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chirpWord := strings.ToLower(ch.Body)
-	chirpWordAfter := chirpWord
-	blackListWorld := []string{"kerfuffle", "sharbert", "fornax"}
+	chirpWordAfter := ch.Body
+	blackListWorld := []string{"kerfuffle", "sharbert", "Fornax"}
 	replacment := "****"
 
 	for _, blackWorld := range blackListWorld {

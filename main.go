@@ -106,7 +106,7 @@ func main() {
 	apiMux.HandleFunc("POST /validate_chirp", ValidateChripHandler)
 
 	// regis to main mux
-	mux.Handle("/api", http.StripPrefix("/api", apiMux))
+	mux.Handle("/api/", http.StripPrefix("/api", apiMux))
 
 	// Set Config Server
 	srv := &http.Server{
@@ -124,8 +124,28 @@ func main() {
 func ValidateChripHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
-
+		ErrJsonResponse(w, http.StatusMethodNotAllowed, "Method Not allowed")
+		return
 	}
+
+	type chirp struct {
+		Body string `json:"body"`
+	}
+
+	dec := json.NewDecoder(r.Body)
+	var ch chirp
+	err := dec.Decode(&ch)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusBadRequest, "Something went wrong")
+		return
+	}
+
+	if len(ch.Body) > 140 {
+		ErrJsonResponse(w, http.StatusBadRequest, "Chirp is to long")
+		return
+	}
+
+	SuccJsonResponse(w, http.StatusOK, map[string]any{"valid": true})
 
 }
 

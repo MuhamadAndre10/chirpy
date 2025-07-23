@@ -155,7 +155,7 @@ func ValidateChripHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SuccJsonResponse(w, http.StatusOK, map[string]any{"cleaned_body": chirpWordAfter})
+	SuccJsonResponse(w, http.StatusOK, map[string]any{"cleaned_body ": chirpWordAfter})
 
 }
 

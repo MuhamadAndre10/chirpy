@@ -1,11 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync/atomic"
+
+	_ "github.com/lib/pq"
+	"github.com/muhamadAndre10/chirpy/internal/database"
 )
 
 // apiConfig untuk melokalisasi counter untuk menghitung server request yang masuk.
@@ -64,6 +69,13 @@ func main() {
 	// Inisialisasi api Config
 	// fileServerHits di dalamnya akan otomatis terinisialisasi ke 0
 	cfg := apiConfig{}
+
+	// set database
+	dbUrl := os.Getenv("DB_URL")
+
+	db, _ := sql.Open("postgres", dbUrl)
+
+	database.New(db)
 
 	// buat mux (router)
 	mux := http.NewServeMux()

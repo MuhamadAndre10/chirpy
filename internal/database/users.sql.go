@@ -17,9 +17,9 @@ RETURNING id, created_at, updated_at, email
 `
 
 type CreateUserParams struct {
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Email     string
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {

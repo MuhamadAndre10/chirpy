@@ -1,4 +1,4 @@
 -- name: CreateUser :one
 INSERT INTO users (created_at, updated_at, email)
-VALUES (now(), now(), "andrepriyanto95@gmail.com")
+VALUES ($1, $2, $3)
 RETURNING *;

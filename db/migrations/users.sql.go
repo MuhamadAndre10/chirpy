@@ -8,7 +8,33 @@ package database
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+const createChirps = `-- name: CreateChirps :one
+INSERT INTO chirps (body, user_id)
+VALUES ($1, $2)
+RETURNING id, body, user_id, created_at, updated_at
+`
+
+type CreateChirpsParams struct {
+	Body   string    `json:"body"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) CreateChirps(ctx context.Context, arg CreateChirpsParams) (Chirp, error) {
+	row := q.db.QueryRowContext(ctx, createChirps, arg.Body, arg.UserID)
+	var i Chirp
+	err := row.Scan(
+		&i.ID,
+		&i.Body,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (created_at, updated_at, email)

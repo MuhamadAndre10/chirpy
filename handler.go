@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	database "github.com/muhamadAndre10/chirpy/db/migrations"
 )
 
@@ -71,6 +71,11 @@ func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request
 
 }
 
+type ChirpRequest struct {
+	Body   string    `json:"body"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
 func (app *Application) ValidateChripHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
@@ -78,31 +83,26 @@ func (app *Application) ValidateChripHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	type chirp struct {
-		Body string `json:"body"`
-	}
+	var chirpReq ChirpRequest
 
-	dec := json.NewDecoder(r.Body)
-	var ch chirp
-	err := dec.Decode(&ch)
+	err := json.NewDecoder(r.Body).Decode(&chirpReq)
 	if err != nil {
-		ErrJsonResponse(w, http.StatusBadRequest, "Something went wrong")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	chirpWordAfter := ch.Body
-	blackListWorld := []string{"kerfuffle", "sharbert", "Fornax", "fornax"}
-	replacment := "****"
-
-	for _, blackWorld := range blackListWorld {
-		chirpWordAfter = strings.ReplaceAll(chirpWordAfter, blackWorld, replacment)
+	argChirps := database.CreateChirpsParams{
+		Body:   chirpReq.Body,
+		UserID: chirpReq.UserID,
 	}
 
-	if len(ch.Body) > 140 {
-		ErrJsonResponse(w, http.StatusBadRequest, "Chirp is to long")
+	chirps, err := app.DB.CreateChirps(r.Context(), argChirps)
+	if err != nil {
+		log.Println(err)
+		ErrJsonResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	SuccJsonResponse(w, http.StatusOK, map[string]any{"cleaned_body": chirpWordAfter})
+	SuccJsonResponse(w, http.StatusOK, chirps)
 
 }

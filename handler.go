@@ -76,7 +76,7 @@ type ChirpRequest struct {
 	UserID uuid.UUID `json:"user_id"`
 }
 
-func (app *Application) ValidateChripHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) CreateChirpsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		ErrJsonResponse(w, http.StatusMethodNotAllowed, "Method Not allowed")
@@ -104,5 +104,45 @@ func (app *Application) ValidateChripHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	SuccJsonResponse(w, http.StatusCreated, chirps)
+
+}
+
+func (app *Application) GetAllChirpsHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodGet {
+		ErrJsonResponse(w, http.StatusMethodNotAllowed, "Method Not allowed")
+		return
+	}
+
+	chirps, err := app.DB.GetAllChirps(r.Context())
+	if err != nil {
+		log.Println(err)
+		ErrJsonResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	SuccJsonResponse(w, http.StatusOK, chirps)
+
+}
+
+func (app *Application) GetChirpsHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodGet {
+		ErrJsonResponse(w, http.StatusMethodNotAllowed, "Method Not allowed")
+		return
+	}
+
+	chirpsIdStr := r.PathValue("id")
+
+	id, _ := uuid.Parse(chirpsIdStr)
+
+	chirp, err := app.DB.GetChirps(r.Context(), id)
+	if err != nil {
+		log.Println(err)
+		ErrJsonResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	SuccJsonResponse(w, http.StatusOK, chirp)
 
 }

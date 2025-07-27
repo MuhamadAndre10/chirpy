@@ -37,10 +37,14 @@ func (app *Application) apiRoute() *http.ServeMux {
 
 	mux := http.NewServeMux()
 
+	// manage chirps
 	// /api/validate_chirp route for handle validate the request chirp.
 	// chirps must be 140 char long or les.
-	mux.HandleFunc("POST /chirps", app.ValidateChripHandler)
+	mux.HandleFunc("POST /chirps", app.CreateChirpsHandler)
+	mux.HandleFunc("GET /chirps", app.GetAllChirpsHandler)
+	mux.HandleFunc("GET /chirps/{id}", app.GetChirpsHandler)
 
+	// manage users
 	mux.HandleFunc("POST /users", app.CreateUserHandler)
 
 	return mux

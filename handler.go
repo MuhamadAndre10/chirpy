@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -137,10 +139,17 @@ func (app *Application) GetChirpsHandler(w http.ResponseWriter, r *http.Request)
 	id, _ := uuid.Parse(chirpsIdStr)
 
 	chirp, err := app.DB.GetChirps(r.Context(), id)
-	if err != nil {
-		log.Println(err)
-		ErrJsonResponse(w, http.StatusInternalServerError, err.Error())
-		return
+
+	if err != nil { // Periksa setiap error terlebih dahulu
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Println(err)
+			ErrJsonResponse(w, http.StatusNotFound, err.Error())
+			return // Kembali setelah mengirim 404
+		} else {
+			log.Println(err)
+			ErrJsonResponse(w, http.StatusInternalServerError, err.Error())
+			return // Kembali setelah mengirim 500
+		}
 	}
 
 	SuccJsonResponse(w, http.StatusOK, chirp)

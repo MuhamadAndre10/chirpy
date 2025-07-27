@@ -103,6 +103,6 @@ func (app *Application) ValidateChripHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	SuccJsonResponse(w, http.StatusOK, chirps)
+	SuccJsonResponse(w, http.StatusCreated, chirps)
 
 }

@@ -47,6 +47,8 @@ func (app *Application) apiRoute() *http.ServeMux {
 	// manage users
 	mux.HandleFunc("POST /users", app.CreateUserHandler)
 
+	mux.HandleFunc("POST /login", app.UserAuthLogin)
+
 	return mux
 
 }

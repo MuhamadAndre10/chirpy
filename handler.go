@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,7 +40,8 @@ func (app *Application) ResetCounterHandler(w http.ResponseWriter, r *http.Reque
 }
 
 type User struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,11 +57,18 @@ func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	newHashPass, err := HashPassword(strings.TrimSpace(u.Password))
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	uArg := database.CreateUserParams{
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Email:     u.Email,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+		Email:          u.Email,
+		HashedPassword: newHashPass,
 	}
 
 	user, err := app.DB.CreateUser(r.Context(), uArg)
@@ -153,5 +162,47 @@ func (app *Application) GetChirpsHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	SuccJsonResponse(w, http.StatusOK, chirp)
+
+}
+
+type UserAuthRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"hashed_password"`
+}
+
+func (app *Application) UserAuthLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		ErrJsonResponse(w, http.StatusMethodNotAllowed, "Method Not allowed")
+		return
+	}
+
+	var userAuthReq UserAuthRequest
+
+	err := json.NewDecoder(r.Body).Decode(&userAuthReq)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	user, err := app.DB.GetUsers(r.Context(), userAuthReq.Email)
+	if err != nil {
+		log.Println(err)
+		// Jika tidak ada user ditemukan, kirim 401 Unauthorized
+		if errors.Is(err, sql.ErrNoRows) { // Asumsikan GetUsers membungkus sql.ErrNoRows
+			ErrJsonResponse(w, http.StatusUnauthorized, "Invalid credentials")
+			return
+		}
+		// Untuk error database lainnya, kirim 500 Internal Server Error
+		ErrJsonResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	ok := ComparePasswordHash(userAuthReq.Password, user.HashedPassword)
+	if !ok {
+		ErrJsonResponse(w, http.StatusUnauthorized, "password not missmatch")
+		return
+	}
+
+	SuccJsonResponse(w, http.StatusOK, user)
 
 }

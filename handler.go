@@ -167,7 +167,7 @@ func (app *Application) GetChirpsHandler(w http.ResponseWriter, r *http.Request)
 
 type UserAuthRequest struct {
 	Email    string `json:"email"`
-	Password string `json:"hashed_password"`
+	Password string `json:"password"`
 }
 
 func (app *Application) UserAuthLogin(w http.ResponseWriter, r *http.Request) {

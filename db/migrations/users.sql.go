@@ -8,6 +8,8 @@ package database
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -42,7 +44,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUsers = `-- name: GetUsers :one
-SELECT email,
+SELECT id,
+    email,
     hashed_password,
     created_at,
     updated_at
@@ -51,6 +54,7 @@ WHERE email = $1
 `
 
 type GetUsersRow struct {
+	ID             uuid.UUID `json:"id"`
 	Email          string    `json:"email"`
 	HashedPassword string    `json:"hashed_password"`
 	CreatedAt      time.Time `json:"created_at"`
@@ -61,6 +65,7 @@ func (q *Queries) GetUsers(ctx context.Context, email string) (GetUsersRow, erro
 	row := q.db.QueryRowContext(ctx, getUsers, email)
 	var i GetUsersRow
 	err := row.Scan(
+		&i.ID,
 		&i.Email,
 		&i.HashedPassword,
 		&i.CreatedAt,

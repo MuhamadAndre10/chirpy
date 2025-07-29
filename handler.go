@@ -83,8 +83,7 @@ func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request
 }
 
 type ChirpRequest struct {
-	Body   string    `json:"body"`
-	UserID uuid.UUID `json:"user_id"`
+	Body string `json:"body"`
 }
 
 func (app *Application) CreateChirpsHandler(w http.ResponseWriter, r *http.Request) {
@@ -102,9 +101,22 @@ func (app *Application) CreateChirpsHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// lakukan proses authentikasi, sebelum membuat chirps
+	token, err := GetBearerToken(r.Header)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusUnauthorized, "bearer token invalid")
+		return
+	}
+
+	userIdFromToken, err := ValidateJWT(token, app.secretJwt)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusUnauthorized, "token invalid")
+		return
+	}
+
 	argChirps := database.CreateChirpsParams{
 		Body:   chirpReq.Body,
-		UserID: chirpReq.UserID,
+		UserID: userIdFromToken,
 	}
 
 	chirps, err := app.DB.CreateChirps(r.Context(), argChirps)
@@ -166,8 +178,9 @@ func (app *Application) GetChirpsHandler(w http.ResponseWriter, r *http.Request)
 }
 
 type UserAuthRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresInSeconds int    `json:"expires_in_seconds,omitempty"`
 }
 
 func (app *Application) UserAuthLogin(w http.ResponseWriter, r *http.Request) {
@@ -203,6 +216,25 @@ func (app *Application) UserAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SuccJsonResponse(w, http.StatusOK, user)
+	duration := time.Duration(userAuthReq.ExpiresInSeconds) * time.Second
+	if userAuthReq.ExpiresInSeconds == 0 {
+		duration = 1 * time.Hour
+		fmt.Println("ExpiresInSeconds tidak disediakan atau nol. Menggunakan default 1 jam.")
+	}
+
+	// buat token dengan jwt untuk proses authentikasinya
+	token, err := MakeJWT(user.ID, app.secretJwt, duration)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan internal, Silahkan coba lagi nanati yaaa")
+	}
+
+	userResponse := make(map[string]any)
+	userResponse["id"] = user.ID
+	userResponse["created_at"] = user.CreatedAt
+	userResponse["updated_at"] = user.UpdatedAt
+	userResponse["email"] = user.Email
+	userResponse["token"] = token
+
+	SuccJsonResponse(w, http.StatusOK, userResponse)
 
 }

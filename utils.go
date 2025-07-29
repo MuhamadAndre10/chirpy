@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -103,5 +104,25 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 
 	return userID, nil
+
+}
+
+func GetBearerToken(header http.Header) (string, error) {
+
+	// Get token value from header Authorization
+	bearerToken := header.Get("Authorization")
+
+	if bearerToken == "" {
+		return "", fmt.Errorf("tidak ada value di header Authorization")
+	}
+
+	// bearerToken = Bearer TOKEN_STRING
+	splitTokenStr := strings.Fields(bearerToken)
+
+	if len(splitTokenStr) != 2 || splitTokenStr[0] != "Bearer" {
+		return "", fmt.Errorf("format header Authorization tidak valid")
+	}
+
+	return splitTokenStr[1], nil
 
 }

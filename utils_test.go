@@ -2,12 +2,13 @@ package main
 
 import (
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/bcrypt"
 )
 
-func TestHasingPassword(t *testing.T) {
+func TestUtils(t *testing.T) {
 
 	password := "test123"
 
@@ -23,17 +24,23 @@ func TestHasingPassword(t *testing.T) {
 
 	})
 
-}
+	t.Run("test create jwt", func(t *testing.T) {
 
-func TestBcrypt(t *testing.T) {
-	password := "testPassword"
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
-	if err != nil {
-		t.Errorf("Expected password to match, but got error: %v", err)
-	}
-	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte("wrongPassword"))
-	if err == nil {
-		t.Error("Expected password to not match, but it did")
-	}
+		superSecretCode := "qwertyuiop123"
+		duration := 5 * time.Minute
+		userID := uuid.New()
+
+		token, err := MakeJWT(userID, superSecretCode, duration)
+		assert.NoError(t, err, "no error")
+
+		uID, err := ValidateJWT(token, superSecretCode)
+		assert.NoError(t, err, "no error")
+
+		assert.EqualValues(t, userID, uID, "userid harus sama")
+
+		t.Logf("token, %v\n", token)
+		t.Logf("err, %v\n", err)
+
+	})
+
 }

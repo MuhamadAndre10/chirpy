@@ -2,8 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -39,4 +43,65 @@ func HashPassword(password string) (string, error) {
 func ComparePasswordHash(password, hashPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashPassword), []byte(password))
 	return err == nil
+}
+
+func MakeJWT(userID uuid.UUID, jwtSecret string, expiresIn time.Duration) (string, error) {
+
+	claims := &jwt.RegisteredClaims{
+		Issuer:    "chirpy", // penerbit
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
+		Subject:   userID.String(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	ss, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return "", err
+	}
+
+	return ss, nil
+
+}
+
+func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
+
+	// 2. Parse token dengan klaim dan fungsi kunci
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(t *jwt.Token) (any, error) {
+
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("metode signing yang tidak valid: %v", t.Header["alg"])
+		}
+
+		return []byte(tokenSecret), nil
+
+	})
+
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("gagal mengurai token: %w", err)
+	}
+
+	// 4. Periksa validitas token (tanda tangan dan klaim standar seperti exp)
+	if !token.Valid {
+		return uuid.Nil, fmt.Errorf("token tidak valid")
+	}
+
+	// dapatkan claims
+	parsedClaims, ok := token.Claims.(*jwt.RegisteredClaims)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("klaim token bukan tipe RegisteredClaims")
+	}
+
+	if parsedClaims.Subject == "" {
+		return uuid.Nil, fmt.Errorf("klaim 'sub' kosong atau tidak ada")
+	}
+
+	userID, err := uuid.Parse(parsedClaims.Subject)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("gagal mengurai subjek ('sub') sebagai UUID: %w", err)
+	}
+
+	return userID, nil
+
 }

@@ -307,3 +307,43 @@ func (app *Application) RefreshTokenHandler(w http.ResponseWriter, r *http.Reque
 	SuccJsonResponse(w, http.StatusOK, token)
 
 }
+
+func (app *Application) RevokeRefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		ErrJsonResponse(w, http.StatusMethodNotAllowed, "Method Not allowed")
+		return
+	}
+
+	if r.ContentLength > 0 {
+		ErrJsonResponse(w, http.StatusBadRequest, "Request body is not allowed for this endpoint")
+		return
+	}
+
+	refreshToken, err := GetBearerToken(r.Header)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan pada server, coba lagi nanti")
+		return
+	}
+
+	refreshTokenData, err := app.DB.GetRefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		log.Println(err)
+		// Jika tidak ada user ditemukan, kirim 401 Unauthorized
+		if errors.Is(err, sql.ErrNoRows) { // Asumsikan GetUsers membungkus sql.ErrNoRows
+			ErrJsonResponse(w, http.StatusUnauthorized, "invalid refresh token")
+			return
+		}
+		// Untuk error database lainnya, kirim 500 Internal Server Error
+		ErrJsonResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	app.DB.UpdateRefreshToken(r.Context(), database.UpdateRefreshTokenParams{
+		Token:     refreshTokenData.Token,
+		RevokeAt:  sql.NullTime{Time: time.Now(), Valid: true},
+		UpdatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+
+	w.WriteHeader(http.StatusNoContent)
+}

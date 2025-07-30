@@ -134,3 +134,21 @@ func (q *Queries) GetUsers(ctx context.Context, email string) (GetUsersRow, erro
 	)
 	return i, err
 }
+
+const updateRefreshToken = `-- name: UpdateRefreshToken :exec
+UPDATE refresh_token
+SET revoke_at = $2,
+    updated_at = $3
+WHERE token = $1
+`
+
+type UpdateRefreshTokenParams struct {
+	Token     string       `json:"token"`
+	RevokeAt  sql.NullTime `json:"revoke_at"`
+	UpdatedAt sql.NullTime `json:"updated_at"`
+}
+
+func (q *Queries) UpdateRefreshToken(ctx context.Context, arg UpdateRefreshTokenParams) error {
+	_, err := q.db.ExecContext(ctx, updateRefreshToken, arg.Token, arg.RevokeAt, arg.UpdatedAt)
+	return err
+}

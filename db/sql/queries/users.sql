@@ -21,3 +21,8 @@ SELECT token,
     user_id
 FROM refresh_token
 WHERE token = $1;
+-- name: UpdateRefreshToken :exec
+UPDATE refresh_token
+SET revoke_at = $2,
+    updated_at = $3
+WHERE token = $1;

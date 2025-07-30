@@ -7,10 +7,43 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+const createRefreshToken = `-- name: CreateRefreshToken :one
+INSERT INTO refresh_token (token, expires_at, revoke_at, user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING token, created_at, updated_at, expires_at, revoke_at, user_id
+`
+
+type CreateRefreshTokenParams struct {
+	Token     string        `json:"token"`
+	ExpiresAt time.Time     `json:"expires_at"`
+	RevokeAt  sql.NullTime  `json:"revoke_at"`
+	UserID    uuid.NullUUID `json:"user_id"`
+}
+
+func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
+	row := q.db.QueryRowContext(ctx, createRefreshToken,
+		arg.Token,
+		arg.ExpiresAt,
+		arg.RevokeAt,
+		arg.UserID,
+	)
+	var i RefreshToken
+	err := row.Scan(
+		&i.Token,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ExpiresAt,
+		&i.RevokeAt,
+		&i.UserID,
+	)
+	return i, err
+}
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (created_at, updated_at, email, hashed_password)
@@ -39,6 +72,34 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+	)
+	return i, err
+}
+
+const getRefreshToken = `-- name: GetRefreshToken :one
+SELECT token,
+    expires_at,
+    revoke_at,
+    user_id
+FROM refresh_token
+WHERE token = $1
+`
+
+type GetRefreshTokenRow struct {
+	Token     string        `json:"token"`
+	ExpiresAt time.Time     `json:"expires_at"`
+	RevokeAt  sql.NullTime  `json:"revoke_at"`
+	UserID    uuid.NullUUID `json:"user_id"`
+}
+
+func (q *Queries) GetRefreshToken(ctx context.Context, token string) (GetRefreshTokenRow, error) {
+	row := q.db.QueryRowContext(ctx, getRefreshToken, token)
+	var i GetRefreshTokenRow
+	err := row.Scan(
+		&i.Token,
+		&i.ExpiresAt,
+		&i.RevokeAt,
+		&i.UserID,
 	)
 	return i, err
 }

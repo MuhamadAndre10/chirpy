@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -124,5 +126,19 @@ func GetBearerToken(header http.Header) (string, error) {
 	}
 
 	return splitTokenStr[1], nil
+
+}
+
+func MakeRefreshToken() (string, error) {
+	key := make([]byte, 32)
+	_, err := rand.Read(key)
+	if err != nil {
+		// Jika ada masalah saat menghasilkan data acak, kembalikan error.
+		return "", fmt.Errorf("gagal membuat refresh token: %w", err)
+	}
+
+	hexRandKey := hex.EncodeToString(key)
+
+	return hexRandKey, nil
 
 }

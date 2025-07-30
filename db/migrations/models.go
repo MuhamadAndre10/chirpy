@@ -19,6 +19,15 @@ type Chirp struct {
 	UpdatedAt sql.NullTime `json:"updated_at"`
 }
 
+type RefreshToken struct {
+	Token     string        `json:"token"`
+	CreatedAt sql.NullTime  `json:"created_at"`
+	UpdatedAt sql.NullTime  `json:"updated_at"`
+	ExpiresAt time.Time     `json:"expires_at"`
+	RevokeAt  sql.NullTime  `json:"revoke_at"`
+	UserID    uuid.NullUUID `json:"user_id"`
+}
+
 type User struct {
 	ID             uuid.UUID `json:"id"`
 	CreatedAt      time.Time `json:"created_at"`

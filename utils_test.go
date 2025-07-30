@@ -113,3 +113,16 @@ func TestAuth(t *testing.T) {
 	}
 
 }
+
+func TestToken(t *testing.T) {
+	t.Run("test refresh token", func(t *testing.T) {
+
+		token, err := MakeRefreshToken()
+
+		t.Logf("token %s\n", token)
+
+		assert.NoError(t, err, "no error")
+
+	})
+
+}

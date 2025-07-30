@@ -226,7 +226,24 @@ func (app *Application) UserAuthLogin(w http.ResponseWriter, r *http.Request) {
 	token, err := MakeJWT(user.ID, app.secretJwt, duration)
 	if err != nil {
 		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan internal, Silahkan coba lagi nanati yaaa")
+		return
 	}
+
+	refreshToken, err := MakeRefreshToken()
+	if err != nil {
+		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan internal, Silahkan coba lagi nanati yaaa")
+		return
+	}
+
+	now := time.Now()
+
+	argRefreshToken := database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		UserID:    uuid.NullUUID{UUID: user.ID, Valid: true},
+		ExpiresAt: now.Add(time.Hour * 24 * 60),
+	}
+
+	app.DB.CreateRefreshToken(r.Context(), argRefreshToken)
 
 	userResponse := make(map[string]any)
 	userResponse["id"] = user.ID
@@ -234,7 +251,59 @@ func (app *Application) UserAuthLogin(w http.ResponseWriter, r *http.Request) {
 	userResponse["updated_at"] = user.UpdatedAt
 	userResponse["email"] = user.Email
 	userResponse["token"] = token
+	userResponse["refresh_token"] = refreshToken
 
 	SuccJsonResponse(w, http.StatusOK, userResponse)
+
+}
+
+func (app *Application) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		ErrJsonResponse(w, http.StatusMethodNotAllowed, "Method Not allowed")
+		return
+	}
+
+	if r.ContentLength > 0 {
+		ErrJsonResponse(w, http.StatusBadRequest, "Request body is not allowed for this endpoint")
+		return
+	}
+
+	refreshToken, err := GetBearerToken(r.Header)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan pada server, coba lagi nanti")
+		return
+	}
+
+	refreshTokenData, err := app.DB.GetRefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		log.Println(err)
+		// Jika tidak ada user ditemukan, kirim 401 Unauthorized
+		if errors.Is(err, sql.ErrNoRows) { // Asumsikan GetUsers membungkus sql.ErrNoRows
+			ErrJsonResponse(w, http.StatusUnauthorized, "invalid refresh token")
+			return
+		}
+		// Untuk error database lainnya, kirim 500 Internal Server Error
+		ErrJsonResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if refreshTokenData.RevokeAt.Valid {
+		ErrJsonResponse(w, http.StatusUnauthorized, "Refresh token revoked")
+		return
+	}
+
+	if time.Now().After(refreshTokenData.ExpiresAt) {
+		ErrJsonResponse(w, http.StatusUnauthorized, "Refresh token expired")
+		return
+	}
+
+	token, err := MakeJWT(refreshTokenData.UserID.UUID, app.secretJwt, 15*time.Minute)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan internal, Silahkan coba lagi nanati yaaa")
+		return
+	}
+
+	SuccJsonResponse(w, http.StatusOK, token)
 
 }

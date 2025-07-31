@@ -18,3 +18,7 @@ SELECT id,
     updated_at
 FROM chirps
 WHERE id = $1;
+-- name: DeleteChrips :execresult
+DELETE FROM chirps
+WHERE id = $1
+    AND user_id = $2;

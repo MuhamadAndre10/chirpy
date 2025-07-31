@@ -418,3 +418,53 @@ func (app *Application) RevokeRefreshTokenHandler(w http.ResponseWriter, r *http
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (app *Application) DeleteChirpHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodDelete {
+		ErrJsonResponse(w, http.StatusMethodNotAllowed, "Method Not allowed")
+		return
+	}
+
+	chirpIDFromParam := r.PathValue("id")
+
+	chirpsID, err := uuid.Parse(chirpIDFromParam)
+	if err != nil {
+		log.Printf("ID chirp tidak valid dari parameter path: %v", err)
+		ErrJsonResponse(w, http.StatusBadRequest, "ID chirp tidak valid")
+		return
+	}
+
+	token, err := GetBearerToken(r.Header)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan pada server, coba lagi nanti")
+		return
+	}
+
+	userIDFromToken, err := ValidateJWT(token, app.secretJwt)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusUnauthorized, "credentials invalid")
+		return
+	}
+
+	result, err := app.DB.DeleteChrips(r.Context(), database.DeleteChripsParams{ID: chirpsID, UserID: userIDFromToken})
+	if err != nil {
+		log.Printf("Kesalahan database saat menghapus chirp (ID: %s, UserID: %s): %v", chirpsID, userIDFromToken, err)
+		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan server saat menghapus chirp")
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Kesalahan saat mendapatkan jumlah baris terpengaruh setelah delete: %v", err)
+		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan internal saat memeriksa operasi penghapusan")
+		return
+	}
+	if rowsAffected == 0 {
+		ErrJsonResponse(w, http.StatusForbidden, "Anda tidak diizinkan untuk menghapus chirp ini atau chirp tidak ditemukan.")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+}

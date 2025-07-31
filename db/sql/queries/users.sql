@@ -26,3 +26,17 @@ UPDATE refresh_token
 SET revoke_at = $2,
     updated_at = $3
 WHERE token = $1;
+-- name: UpdateUserPassword :one
+UPDATE users
+SET hashed_password = $2,
+    email = $3
+WHERE id = $1
+RETURNING *;
+-- name: GetUsersByID :one 
+SELECT id,
+    email,
+    hashed_password,
+    created_at,
+    updated_at
+FROM users
+WHERE id = $1;

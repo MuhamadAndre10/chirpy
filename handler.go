@@ -82,6 +82,73 @@ func (app *Application) CreateUserHandler(w http.ResponseWriter, r *http.Request
 
 }
 
+type UpdateUserPassRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (app *Application) UpdateUserPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	token, err := GetBearerToken(r.Header)
+	if err != nil {
+		log.Println(err)
+		ErrJsonResponse(w, http.StatusUnauthorized, "invalid credentials token")
+		return
+	}
+
+	userID, err := ValidateJWT(token, app.secretJwt)
+	if err != nil {
+		log.Println(err)
+		ErrJsonResponse(w, http.StatusUnauthorized, "invalid credentials token")
+		return
+	}
+
+	var userRequest UpdateUserPassRequest
+
+	err = json.NewDecoder(r.Body).Decode(&userRequest)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusBadRequest, "bad request")
+		return
+	}
+
+	user, err := app.DB.GetUsersByID(r.Context(), userID)
+	if err != nil { // Periksa setiap error terlebih dahulu
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Println(err.Error())
+			ErrJsonResponse(w, http.StatusNotFound, fmt.Sprintf("user dengan email %v tidak ditemukan", userID))
+			return // Kembali setelah mengirim 404
+		} else {
+			log.Println(err.Error())
+			ErrJsonResponse(w, http.StatusInternalServerError, "terjadi kesalahan server")
+			return // Kembali setelah mengirim 500
+		}
+	}
+
+	hashPass, err := HashPassword(userRequest.Password)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan server")
+		return
+	}
+
+	userAfterUpdatePass, err := app.DB.UpdateUserPassword(r.Context(), database.UpdateUserPasswordParams{
+		ID:             user.ID,
+		Email:          userRequest.Email,
+		HashedPassword: hashPass,
+	})
+	if err != nil {
+		log.Println(err.Error())
+		ErrJsonResponse(w, http.StatusInternalServerError, "terjadi kesalahan server")
+		return
+	}
+
+	SuccJsonResponse(w, http.StatusOK, userAfterUpdatePass)
+
+}
+
 type ChirpRequest struct {
 	Body string `json:"body"`
 }

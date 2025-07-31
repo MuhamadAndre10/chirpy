@@ -135,6 +135,37 @@ func (q *Queries) GetUsers(ctx context.Context, email string) (GetUsersRow, erro
 	return i, err
 }
 
+const getUsersByID = `-- name: GetUsersByID :one
+SELECT id,
+    email,
+    hashed_password,
+    created_at,
+    updated_at
+FROM users
+WHERE id = $1
+`
+
+type GetUsersByIDRow struct {
+	ID             uuid.UUID `json:"id"`
+	Email          string    `json:"email"`
+	HashedPassword string    `json:"hashed_password"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+func (q *Queries) GetUsersByID(ctx context.Context, id uuid.UUID) (GetUsersByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getUsersByID, id)
+	var i GetUsersByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.HashedPassword,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateRefreshToken = `-- name: UpdateRefreshToken :exec
 UPDATE refresh_token
 SET revoke_at = $2,
@@ -151,4 +182,31 @@ type UpdateRefreshTokenParams struct {
 func (q *Queries) UpdateRefreshToken(ctx context.Context, arg UpdateRefreshTokenParams) error {
 	_, err := q.db.ExecContext(ctx, updateRefreshToken, arg.Token, arg.RevokeAt, arg.UpdatedAt)
 	return err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :one
+UPDATE users
+SET hashed_password = $2,
+    email = $3
+WHERE id = $1
+RETURNING id, created_at, updated_at, email, hashed_password
+`
+
+type UpdateUserPasswordParams struct {
+	ID             uuid.UUID `json:"id"`
+	HashedPassword string    `json:"hashed_password"`
+	Email          string    `json:"email"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserPassword, arg.ID, arg.HashedPassword, arg.Email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.HashedPassword,
+	)
+	return i, err
 }

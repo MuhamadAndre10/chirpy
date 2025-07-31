@@ -437,7 +437,7 @@ func (app *Application) DeleteChirpHandler(w http.ResponseWriter, r *http.Reques
 
 	token, err := GetBearerToken(r.Header)
 	if err != nil {
-		ErrJsonResponse(w, http.StatusInternalServerError, "Terjadi kesalahan pada server, coba lagi nanti")
+		ErrJsonResponse(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 

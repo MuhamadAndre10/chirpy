@@ -304,7 +304,11 @@ func (app *Application) RefreshTokenHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	SuccJsonResponse(w, http.StatusOK, token)
+	response := map[string]any{
+		"token": token,
+	}
+
+	SuccJsonResponse(w, http.StatusOK, response)
 
 }
 

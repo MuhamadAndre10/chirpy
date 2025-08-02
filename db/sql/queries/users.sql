@@ -6,6 +6,7 @@ RETURNING *;
 SELECT id,
     email,
     hashed_password,
+    is_chirpy_red,
     created_at,
     updated_at
 FROM users
@@ -39,4 +40,8 @@ SELECT id,
     created_at,
     updated_at
 FROM users
+WHERE id = $1;
+-- name: UpdateChirpsMemberWithUserID :execresult
+UPDATE users
+SET is_chirpy_red = TRUE
 WHERE id = $1;

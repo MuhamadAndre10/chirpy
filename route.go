@@ -54,6 +54,9 @@ func (app *Application) apiRoute() *http.ServeMux {
 	mux.HandleFunc("POST /refresh", app.RefreshTokenHandler)
 	mux.HandleFunc("POST /revoke", app.RevokeRefreshTokenHandler)
 
+	// webhooks
+	mux.HandleFunc("POST /polka/webhooks", app.UpdateUserMemberIsChirpyRed)
+
 	return mux
 
 }

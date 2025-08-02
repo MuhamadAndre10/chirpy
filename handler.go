@@ -319,6 +319,7 @@ func (app *Application) UserAuthLogin(w http.ResponseWriter, r *http.Request) {
 	userResponse["email"] = user.Email
 	userResponse["token"] = token
 	userResponse["refresh_token"] = refreshToken
+	userResponse["is_chripy_red"] = user.IsChirpyRed
 
 	SuccJsonResponse(w, http.StatusOK, userResponse)
 
@@ -467,4 +468,67 @@ func (app *Application) DeleteChirpHandler(w http.ResponseWriter, r *http.Reques
 
 	w.WriteHeader(http.StatusNoContent)
 
+}
+
+type UpdateUserMemberIsChirpyRedRequest struct {
+	Event string `json:"event"`
+	Data  struct {
+		UserID string `json:"user_id"`
+	} `json:"data"`
+}
+
+func (app *Application) UpdateUserMemberIsChirpyRed(w http.ResponseWriter, r *http.Request) {
+	// Pastikan method adalah POST
+	if r.Method != http.MethodPost {
+		ErrJsonResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Definisikan struct untuk request body
+	var userRequest UpdateUserMemberIsChirpyRedRequest
+
+	// Decode body request JSON ke dalam struct
+	err := json.NewDecoder(r.Body).Decode(&userRequest)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Logika utama: Cek event
+	if userRequest.Event == "user.upgraded" {
+		uID, err := uuid.Parse(userRequest.Data.UserID)
+		if err != nil {
+			ErrJsonResponse(w, http.StatusBadRequest, "Invalid user ID format")
+			return
+		}
+
+		// Panggil fungsi untuk update user di database
+		result, err := app.DB.UpdateChirpsMemberWithUserID(r.Context(), uID)
+		if err != nil {
+			log.Printf("Database error updating user (UserID: %s): %v", uID, err)
+			ErrJsonResponse(w, http.StatusInternalServerError, "Failed to update user")
+			return
+		}
+
+		// Cek apakah ada baris yang terpengaruh (user ditemukan)
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Printf("Error getting rows affected after update: %v", err)
+			ErrJsonResponse(w, http.StatusInternalServerError, "Server error")
+			return
+		}
+
+		if rowsAffected == 0 {
+			ErrJsonResponse(w, http.StatusNotFound, "User not found")
+			return
+		}
+
+		// Jika berhasil, kirim status 204
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// Jika event bukan "user.upgraded", kirim status 204
+	// Ini memberitahu Polka bahwa webhook diterima tanpa perlu diproses lebih lanjut
+	w.WriteHeader(http.StatusNoContent)
 }

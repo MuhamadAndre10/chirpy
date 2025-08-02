@@ -319,7 +319,7 @@ func (app *Application) UserAuthLogin(w http.ResponseWriter, r *http.Request) {
 	userResponse["email"] = user.Email
 	userResponse["token"] = token
 	userResponse["refresh_token"] = refreshToken
-	userResponse["is_chripy_red"] = user.IsChirpyRed
+	userResponse["is_chirpy_red"] = user.IsChirpyRed
 
 	SuccJsonResponse(w, http.StatusOK, userResponse)
 

@@ -486,12 +486,12 @@ func (app *Application) UpdateUserMemberIsChirpyRed(w http.ResponseWriter, r *ht
 
 	apiKey, err := GetAPIKey(r.Header)
 	if err != nil {
-		ErrJsonResponse(w, http.StatusBadRequest, err.Error())
+		ErrJsonResponse(w, http.StatusUnauthorized, "failed authorization")
 		return
 	}
 
 	if apiKey != app.polkaApiKey {
-		ErrJsonResponse(w, http.StatusUnauthorized, "authorization invalid")
+		ErrJsonResponse(w, http.StatusUnauthorized, "failed authorization")
 		return
 	}
 

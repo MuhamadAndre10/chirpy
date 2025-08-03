@@ -142,3 +142,22 @@ func MakeRefreshToken() (string, error) {
 	return hexRandKey, nil
 
 }
+
+func GetAPIKey(header http.Header) (string, error) {
+
+	apiKey := header.Get("Authorization")
+
+	if apiKey == "" {
+		return "", fmt.Errorf("tidak ada value di header Authorization")
+	}
+
+	// bearerToken = Bearer TOKEN_STRING
+	splitTokenStr := strings.Fields(apiKey)
+
+	if len(splitTokenStr) != 2 || splitTokenStr[0] != "ApiKey" {
+		return "", fmt.Errorf("format header Authorization tidak valid")
+	}
+
+	return splitTokenStr[1], nil
+
+}

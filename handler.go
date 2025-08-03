@@ -484,11 +484,22 @@ func (app *Application) UpdateUserMemberIsChirpyRed(w http.ResponseWriter, r *ht
 		return
 	}
 
+	apiKey, err := GetAPIKey(r.Header)
+	if err != nil {
+		ErrJsonResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if apiKey != app.polkaApiKey {
+		ErrJsonResponse(w, http.StatusUnauthorized, "authorization invalid")
+		return
+	}
+
 	// Definisikan struct untuk request body
 	var userRequest UpdateUserMemberIsChirpyRedRequest
 
 	// Decode body request JSON ke dalam struct
-	err := json.NewDecoder(r.Body).Decode(&userRequest)
+	err = json.NewDecoder(r.Body).Decode(&userRequest)
 	if err != nil {
 		ErrJsonResponse(w, http.StatusBadRequest, "Invalid request payload")
 		return

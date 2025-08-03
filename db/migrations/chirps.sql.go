@@ -116,31 +116,26 @@ func (q *Queries) GetChirps(ctx context.Context, id uuid.UUID) (Chirp, error) {
 const getChirpyWithUserID = `-- name: GetChirpyWithUserID :many
 SELECT id,
     body,
+    user_id,
     created_at,
     updated_at
 FROM chirps
 WHERE user_id = $1
 `
 
-type GetChirpyWithUserIDRow struct {
-	ID        uuid.UUID    `json:"id"`
-	Body      string       `json:"body"`
-	CreatedAt sql.NullTime `json:"created_at"`
-	UpdatedAt sql.NullTime `json:"updated_at"`
-}
-
-func (q *Queries) GetChirpyWithUserID(ctx context.Context, userID uuid.UUID) ([]GetChirpyWithUserIDRow, error) {
+func (q *Queries) GetChirpyWithUserID(ctx context.Context, userID uuid.UUID) ([]Chirp, error) {
 	rows, err := q.db.QueryContext(ctx, getChirpyWithUserID, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetChirpyWithUserIDRow
+	var items []Chirp
 	for rows.Next() {
-		var i GetChirpyWithUserIDRow
+		var i Chirp
 		if err := rows.Scan(
 			&i.ID,
 			&i.Body,
+			&i.UserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

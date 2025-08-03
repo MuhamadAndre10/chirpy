@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -205,52 +206,70 @@ func (app *Application) GetAllChirpsHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	authorIdParam := r.URL.Query().Get("author_id")
+	sortParam := r.URL.Query().Get("sort")
 
+	var chrips []database.Chirp
+	var err error
+
+	// Logika 1: Ambil chirps berdasarkan user ID jika authorIdParam ada
 	if authorIdParam != "" {
-		uid, err := uuid.Parse(authorIdParam)
-		if err != nil {
+		uid, parErr := uuid.Parse(authorIdParam)
+		if parErr != nil {
 			ErrJsonResponse(w, http.StatusBadRequest, "format user id invalid")
 			return
 		}
 
-		chrips, err := app.DB.GetChirpyWithUserID(r.Context(), uid)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				log.Println(err.Error())
-				ErrJsonResponse(w, http.StatusNotFound, fmt.Sprintf("chrips dengan user id %v tidak ditemukan", uid))
-				return // Kembali setelah mengirim 404
-			} else {
-				log.Println(err.Error())
-				ErrJsonResponse(w, http.StatusInternalServerError, "terjadi kesalahan server")
-				return // Kembali setelah mengirim 500
-			}
-		}
-
-		var chirpsResponse []map[string]any
-		for _, value := range chrips {
-			chripData := map[string]any{
-				"id":         value.ID,
-				"user_id":    uid,
-				"body":       value.Body,
-				"created_at": value.CreatedAt,
-				"updated_at": value.UpdatedAt,
-			}
-			chirpsResponse = append(chirpsResponse, chripData)
-		}
-
-		SuccJsonResponse(w, http.StatusOK, chirpsResponse)
-		return
-
+		chrips, err = app.DB.GetChirpyWithUserID(r.Context(), uid)
+	} else {
+		// Logika 2: Ambil semua chirps jika authorIdParam tidak ada
+		chrips, err = app.DB.GetAllChirps(r.Context())
 	}
 
-	chirps, err := app.DB.GetAllChirps(r.Context())
 	if err != nil {
-		log.Println(err)
-		ErrJsonResponse(w, http.StatusInternalServerError, err.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Println(err.Error())
+			ErrJsonResponse(w, http.StatusNotFound, "data tidak ditemukan")
+			return // Kembali setelah mengirim 404
+		} else {
+			log.Println(err.Error())
+			ErrJsonResponse(w, http.StatusInternalServerError, "terjadi kesalahan server")
+			return // Kembali setelah mengirim 500
+		}
+	}
+
+	// Lakukan pengurutan hanya jika parameter sort ada
+	// Lakukan pengurutan hanya jika parameter sort ada atau kita ingin default
+	switch sortParam {
+	case "desc":
+		// DESC: dari baru ke lama
+		sort.Slice(chrips, func(i, j int) bool {
+			return chrips[i].CreatedAt.Time.After(chrips[j].CreatedAt.Time)
+		})
+	case "", "asc":
+		// Default (jika kosong) atau ASC: dari lama ke baru
+		sort.Slice(chrips, func(i, j int) bool {
+			return chrips[i].CreatedAt.Time.Before(chrips[j].CreatedAt.Time)
+		})
+	default:
+		// Kirim bad request jika parameter sort tidak valid
+		ErrJsonResponse(w, http.StatusBadRequest, "parameter sort invalid, gunakan 'asc' atau 'desc'")
 		return
 	}
 
-	SuccJsonResponse(w, http.StatusOK, chirps)
+	// Bentuk respons setelah pengurutan
+	var chirpsResponse []map[string]any
+	for _, value := range chrips {
+		chirpData := map[string]any{
+			"id":         value.ID,
+			"user_id":    value.UserID, // Gunakan UserID dari data chirp
+			"body":       value.Body,
+			"created_at": value.CreatedAt,
+			"updated_at": value.UpdatedAt,
+		}
+		chirpsResponse = append(chirpsResponse, chirpData)
+	}
+
+	SuccJsonResponse(w, http.StatusOK, chirpsResponse)
 
 }
 

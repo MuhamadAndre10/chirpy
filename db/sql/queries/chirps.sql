@@ -22,3 +22,10 @@ WHERE id = $1;
 DELETE FROM chirps
 WHERE id = $1
     AND user_id = $2;
+-- name: GetChirpyWithUserID :many
+SELECT id,
+    body,
+    created_at,
+    updated_at
+FROM chirps
+WHERE user_id = $1;

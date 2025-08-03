@@ -204,6 +204,45 @@ func (app *Application) GetAllChirpsHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	authorIdParam := r.URL.Query().Get("author_id")
+
+	if authorIdParam != "" {
+		uid, err := uuid.Parse(authorIdParam)
+		if err != nil {
+			ErrJsonResponse(w, http.StatusBadRequest, "format user id invalid")
+			return
+		}
+
+		chrips, err := app.DB.GetChirpyWithUserID(r.Context(), uid)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				log.Println(err.Error())
+				ErrJsonResponse(w, http.StatusNotFound, fmt.Sprintf("chrips dengan user id %v tidak ditemukan", uid))
+				return // Kembali setelah mengirim 404
+			} else {
+				log.Println(err.Error())
+				ErrJsonResponse(w, http.StatusInternalServerError, "terjadi kesalahan server")
+				return // Kembali setelah mengirim 500
+			}
+		}
+
+		var chirpsResponse []map[string]any
+		for _, value := range chrips {
+			chripData := map[string]any{
+				"id":         value.ID,
+				"user_id":    uid,
+				"body":       value.Body,
+				"created_at": value.CreatedAt,
+				"updated_at": value.UpdatedAt,
+			}
+			chirpsResponse = append(chirpsResponse, chripData)
+		}
+
+		SuccJsonResponse(w, http.StatusOK, chirpsResponse)
+		return
+
+	}
+
 	chirps, err := app.DB.GetAllChirps(r.Context())
 	if err != nil {
 		log.Println(err)

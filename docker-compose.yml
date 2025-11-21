@@ -2,5 +2,51 @@ version: '3.8'
 services:
   app:
     build:
-      context: contextPath
+      context: .
       dockerfile: Dockerfile
+    restart: always
+    # environment:
+    #   - DB_URL=postgres://postgres:root@localhost:5433/chripy?sslmode=disable
+    #   - JWT_SECRET=zyIAv8gwStHS119S6KWeGkLFyNxn0Zdm9Nm33U2MBmSRPIPqJt2g82V/akMIkl5PDhC7jP6AUSrOupRH0QyfVQ==
+    #   - POLKA_APIKEY=f271c81ff7084ee5b99a5091b42d486e
+    ports:
+      - 8080:8080
+    deploy:
+      mode: replicated
+      replicas: 1
+    volumes:
+      - ./.env:/app/.env
+    depends_on:
+      - postgres
+  migrate:
+    image: gomicro/goose
+    container_name: goose_migrate
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=postgres://postgres:root@postgres:5432/chripy?sslmode=disable
+    volumes:
+      - ./db/sql/schema:/db
+    command: goose -dir /db up
+    depends_on:
+      - postgres
+    
+  postgres:
+    image: postgres:18-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: chripy
+    healthcheck:
+      test: ["CMD-SHELL", "pg-isready -U postgres"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+  

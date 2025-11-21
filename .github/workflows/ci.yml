@@ -46,27 +46,47 @@ jobs:
               username: ${{ secrets.USERNAME }}
               key: ${{ secrets.SSH_KEY }}
               script: |
+                # Masuk ke folder
                 cd /root/app/chripy
+                
+                # --- DEBUGGING START ---
+                echo "📂 Cek file yang sampai dari SCP:"
+                ls -laR
+                # -----------------------
 
-                # Rename file prod menjadi default agar mudah dipanggil
-                mv docker-compose.prod.yml docker-compose.yml
-
-                # Pindahkan schema ke folder yang rapi (sesuai volume di yaml)
+                # 1. Rapikan File Docker Compose
+                # Pindahkan jika SCP menaruhnya di dalam subfolder (kadang terjadi)
+                mv docker-compose.prod.yml docker-compose.yml 2>/dev/null || true
+                
+                # 2. Rapikan Folder Schema
+                # Hapus folder schema tujuan (biar fresh), lalu buat ulang
+                rm -rf schema
                 mkdir -p schema
-                cp -r db/sql/schema/* schema/ || true
+                # Copy isi dari folder hasil SCP (db/sql/schema) ke folder volume (schema)
+                cp -r db/sql/schema/* schema/ 2>/dev/null || echo "⚠️ Gagal copy schema, cek struktur folder"
 
-                # Inject .env (Metode Injection)
+                # 3. Buat file .env (Injection)
+                echo "📝 Membuat file .env..."
                 echo "${{ secrets.PROD_ENV_FILE }}" > .env
+                # Tambahkan nama image ke .env
+                echo "DOCKER_IMAGE=${{ secrets.DOCKER_USER }}/chripy:latest" >> .env
 
-                # Export nama image ke environment variable shell
-                # Agar terbaca oleh ${DOCKER_IMAGE} di yaml
-                echo "DOCKER_IMAGE=${{ secrets.DOCKER_USER }}/chripy:latest" > .env
+                # --- DEBUGGING ENV ---
+                echo "🔍 Cek apakah .env terbentuk:"
+                ls -la .env
+                # ---------------------
 
-                # Login & Pull
+                # 4. Login & Deploy
+                echo "🚀 Mulai Deploy..."
                 echo ${{ secrets.DOCKER_TOKEN }} | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+                
+                # Matikan dulu biar bersih (Opsional, tapi aman untuk debugging)
+                docker compose down
+                
                 docker compose pull 
-
                 docker compose up -d --remove-orphans
+                
+                echo "✅ Deployment Selesai!"
 
 
 

@@ -3,12 +3,10 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"sync/atomic"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	database "github.com/muhamadAndre10/chirpy/db/migrations"
 )
@@ -30,18 +28,24 @@ type Application struct {
 
 func main() {
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Println("can't find a .env file")
-		return
-	}
+	// err := godotenv.Load(".env")
+	// if err != nil {
+	// 	log.Println("can't find a .env file")
+	// 	return
+	// }
 
 	// get env from .env file
 	dbUrl := os.Getenv("DB_URL")
 	jwtSecret := os.Getenv("JWT_SECRET")
 	apiPolkaKey := os.Getenv("POLKA_APIKEY")
 
-	db, _ := sql.Open("postgres", dbUrl)
+	db, err := sql.Open("postgres", dbUrl)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("koneksi database sukses")
 
 	dbQueries := database.New(db)
 

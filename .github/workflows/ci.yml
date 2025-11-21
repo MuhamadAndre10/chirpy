@@ -1,0 +1,74 @@
+name: Deploy Go App to VPS
+
+on: 
+    push:
+        branches: ["main"]
+
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+            
+            - name: Login to Docker hub
+              uses: docker/login-action@v3
+              with:
+                username: ${{ secrets.DOCKER_USER }}
+                password: ${{ secrets.DOCKER_TOKEN }}
+            - name: Build and Deploy
+              run: |
+                docker build -t ${{ secrets.DOCKER_USER }}/chripy:latest .
+                docker push ${{ secrets.DOCKER_USER }}/chripy:latest
+    deploy-to-vps:
+        needs: build-and-push
+        runs-on: ubuntu-latest
+        steps:
+          - name: Copy file to VPS
+            uses: appleboy/scp-action@master
+            with:
+              host: ${{ secrets.HOST }}
+              username: ${{ secrets.USERNAME }}
+              key: ${{ secrets.SSH_KEY }}
+              # Copy folder schema lokal -> ke folder schema di VPS
+              # Copy file compose prod -> jadi docker-compose.yml di VPS
+              source: "db/sql/schema/*,docker-compose.prod.yml"
+              target: "/root/app/chripy"
+              strip_components: 0
+
+          - name: Connect to VPS and Deploy 
+            uses: appleboy/ssh-action@master
+            with:
+              host: ${{ secrets.HOST }}
+              username: ${{ secrets.USERNAME }}
+              key: ${{ secrets.SSH_KEY }}
+              script: |
+                cd /root/app/chripy
+
+                # Rename file prod menjadi default agar mudah dipanggil
+                mv docker-compose.prod.yml docker-compose.yml
+
+                # Pindahkan schema ke folder yang rapi (sesuai volume di yaml)
+                mkdir -p schema
+                cp -r db/sql/schema/* schema/ || true
+
+                # Inject .env (Metode Injection)
+                echo "${{ secrets.PROD_ENV_FILE }}" > .env
+
+                # Export nama image ke environment variable shell
+                # Agar terbaca oleh ${DOCKER_IMAGE} di yaml
+                echo "DOCKER_IMAGE=${{ secrets.DOCKER_USER }}/chripy:latest" > .env
+
+                # Login & Pull
+                echo ${{ secrets.DOCKER_TOKEN }} | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+                docker compose pull 
+
+                docker compose up -d --remove-orphans
+
+
+
+
+              
+                
+            
+

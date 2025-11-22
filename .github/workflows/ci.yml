@@ -26,9 +26,15 @@ jobs:
         steps:
           - name: Checkout Code
             uses: actions/checkout@v4
-            
+
+          - name: Prepare Deployment files
+            run: |
+              # rename files prod in runner
+              mv docker-compose.prod.yml docker-compose.yml
+
+              # lakukan konfigurasi file yang lainnya disini
           - name: Copy file to VPS
-            uses: appleboy/scp-action@master
+            uses: appleboy/scp-action@v1
             with:
               host: ${{ secrets.HOST }}
               username: ${{ secrets.USERNAME }}
@@ -37,7 +43,6 @@ jobs:
               # Copy file compose prod -> jadi docker-compose.yml di VPS
               source: "db/sql/schema/*,docker-compose.prod.yml"
               target: "/root/app/chripy"
-              strip_components: 0
 
           - name: Connect to VPS and Deploy 
             uses: appleboy/ssh-action@master
@@ -49,42 +54,28 @@ jobs:
                 # Masuk ke folder
                 cd /root/app/chripy
                 
-                # --- DEBUGGING START ---
-                echo "📂 Cek file yang sampai dari SCP:"
-                ls -laR
-                # -----------------------
+                # Jika SCP mengirim 'db/sql/schema', kita pindahkan isinya ke 'schema' root project
+                if [ -d "db/sql/schema" ]; then
+                  echo "📂 Merapikan folder schema..."
+                  rm -rf schema
+                  mkdir -p schema
+                  cp -r db/sql/schema/* schema/
+                  rm -rf db  # Bersihkan folder sisa SCP
+                fi
 
-                # 1. Rapikan File Docker Compose
-                # Pindahkan jika SCP menaruhnya di dalam subfolder (kadang terjadi)
-                mv docker-compose.prod.yml docker-compose.yml 2>/dev/null || true
-                
-                # 2. Rapikan Folder Schema
-                # Hapus folder schema tujuan (biar fresh), lalu buat ulang
-                rm -rf schema
-                mkdir -p schema
-                # Copy isi dari folder hasil SCP (db/sql/schema) ke folder volume (schema)
-                cp -r db/sql/schema/* schema/ 2>/dev/null || echo "⚠️ Gagal copy schema, cek struktur folder"
-
-                # 3. Buat file .env (Injection)
-                echo "📝 Membuat file .env..."
+                echo "📝 Update file .env..."
                 echo "${{ secrets.PROD_ENV_FILE }}" > .env
-                # Tambahkan nama image ke .env
                 echo "DOCKER_IMAGE=${{ secrets.DOCKER_USER }}/chripy:latest" >> .env
 
-                # --- DEBUGGING ENV ---
-                echo "🔍 Cek apakah .env terbentuk:"
-                ls -la .env
-                # ---------------------
-
-                # 4. Login & Deploy
                 echo "🚀 Mulai Deploy..."
                 echo ${{ secrets.DOCKER_TOKEN }} | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
                 
-                # Matikan dulu biar bersih (Opsional, tapi aman untuk debugging)
-                docker compose down
-                
-                docker compose pull 
+                docker compose pull
+
                 docker compose up -d --remove-orphans
+
+                echo "🧹 Membersihkan image lama..."
+                docker image prune -f
                 
                 echo "✅ Deployment Selesai!"
 

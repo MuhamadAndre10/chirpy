@@ -33,6 +33,7 @@ func main() {
 	// 	log.Println("can't find a .env file")
 	// 	return
 	// }
+	fmt.Println("Hello world")
 
 	// get env from .env file
 	dbUrl := os.Getenv("DB_URL")

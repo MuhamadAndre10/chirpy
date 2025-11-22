@@ -19,7 +19,8 @@ services:
       - ./schema:/db
     command: goose -dir /db up
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
   
   postgres:
     image: postgres:18-alpine

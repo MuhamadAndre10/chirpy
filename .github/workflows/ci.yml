@@ -41,7 +41,7 @@ jobs:
               key: ${{ secrets.SSH_KEY }}
               # Copy folder schema lokal -> ke folder schema di VPS
               # Copy file compose prod -> jadi docker-compose.yml di VPS
-              source: "db/sql/schema/*,docker-compose.prod.yml"
+              source: "db/sql/schema/*,docker-compose.yml"
               target: "/root/app/chripy"
 
           - name: Connect to VPS and Deploy 

@@ -3,12 +3,10 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"sync/atomic"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	database "github.com/muhamadAndre10/chirpy/db/migrations"
 )
@@ -30,11 +28,11 @@ type Application struct {
 
 func main() {
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Println("can't find a .env file")
-		return
-	}
+	// err := godotenv.Load(".env")
+	// if err != nil {
+	// 	log.Println("can't find a .env file")
+	// 	return
+	// }
 
 	// get env from .env file
 	dbUrl := os.Getenv("DB_URL")

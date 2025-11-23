@@ -64,8 +64,14 @@ jobs:
                 fi
 
                 echo "📝 Update file .env..."
-                echo "${{ secrets.PROD_ENV_FILE }}" > .env
-                echo "DOCKER_IMAGE=${{ secrets.DOCKER_USER }}/chripy:latest" >> .env
+                # echo "${{ secrets.PROD_ENV_FILE }}" > .env // script dg fungsi mengcopy
+                cat <<EOF  > .env 
+                ${{ secrets.PROD_ENV_FILE }}
+                "DOCKER_IMAGE=${{ secrets.DOCKER_USER }}/chripy:latest" 
+                EOF
+
+
+                chmod 600 .env
 
                 echo "🚀 Mulai Deploy..."
                 echo ${{ secrets.DOCKER_TOKEN }} | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
